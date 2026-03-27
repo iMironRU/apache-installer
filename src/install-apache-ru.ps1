@@ -1,27 +1,27 @@
 <#
 .SYNOPSIS
-    Apache HTTP Server 2.4 — Windows Installer
+    Apache HTTP Server 2.4 — Установщик для Windows
 .DESCRIPTION
-    Automated installer for Apache HTTP Server on Windows.
-    Supports multiple instances on different ports.
-    Compatible with ps2exe compilation to standalone .exe
+    Автоматическая установка Apache HTTP Server на Windows.
+    Поддерживает несколько экземпляров на разных портах.
+    Совместим с компиляцией через ps2exe в standalone .exe
 
-    Features:
-    - Auto-detects OS architecture (x86/x64)
-    - Checks Visual C++ Redistributable
-    - Multiple Apache instances support
-    - Automatic backup before reinstall/remove
-    - Windows Firewall rule management
-    - Instance registry via Windows Registry (HKLM)
-    - Full logging of all operations
+    Возможности:
+    - Автоопределение разрядности ОС (x86/x64)
+    - Проверка Visual C++ Redistributable
+    - Несколько экземпляров Apache на разных портах
+    - Автоматический бэкап перед переустановкой/удалением
+    - Управление правилами брандмауэра Windows
+    - Реестр экземпляров через Windows Registry (HKLM)
+    - Полное логирование всех операций
 
 .NOTES
     Copyright (c) 2026 imiron.ru
-    Licensed under the Apache License 2.0
+    Лицензия: Apache License 2.0
     https://github.com/imiron-ru/apache-installer
 
-    Requires: Windows 7+, PowerShell 5.1+, Administrator rights
-    Compile:  Invoke-ps2exe .\install-apache-en.ps1 .\install-apache-en.exe -requireAdmin -noConsole:$false
+    Требования: Windows 7+, PowerShell 5.1+, права администратора
+    Компиляция: Invoke-ps2exe .\install-apache-ru.ps1 .\install-apache-ru.exe -requireAdmin -noConsole:$false
 #>
 
 Set-StrictMode -Version Latest
@@ -102,9 +102,9 @@ function Write-Warn([string]$Text) { Write-Host "  ~ $Text" -ForegroundColor Yel
 function Write-Fail([string]$Text) { Write-Host "  ! $Text" -ForegroundColor Red;    Write-Log "! $Text" 'ERROR' }
 
 function Confirm-Action([string]$Prompt) {
-    $a = (Read-Host "  $Prompt (D/Y - yes, N - no)").Trim().ToUpper()
+    $a = (Read-Host "  $Prompt (Д/Y - да, Н/N - нет)").Trim().ToUpper()
     Write-Log "Prompt: $Prompt | Answer: $a" 'INPUT'
-    return ($a -eq "Д" -or $a -eq "Y" -or $a -eq "D")
+    return ($a -eq "Д" -or $a -eq "Y" -or $a -eq "D" -or $a -eq "N" -eq $false)
 }
 
 function Read-Choice {
@@ -187,7 +187,7 @@ function Get-InstalledApaches {
         $null = $seen.Add($svc.Name)
 
         $binPath   = $svc.PathName -replace '"','' -replace '\s+-k.*$',''
-        $installDir = if ($binPath) { Split-Path (Split-Path $binPath -Parent) -Parent } else { "unknown" }
+        $installDir = if ($binPath) { Split-Path (Split-Path $binPath -Parent) -Parent } else { "неизвестно" }
 
         # Try to read port from httpd.conf
         $port = "?"
@@ -237,7 +237,7 @@ function Get-VCRedistVersion([int]$Bits) {
 }
 
 function Assert-VCRedist([int]$Bits) {
-    Write-Step "Checking Visual C++ Redistributable ($Bits-bit)..."
+    Write-Step "Проверяю Visual C++ Redistributable ($Bits-bit)..."
     Write-Log "VC++ Redist check: $Bits-bit, min $VCREDIST_MIN" 'INFO'
 
     $installed = Get-VCRedistVersion -Bits $Bits
@@ -249,24 +249,24 @@ function Assert-VCRedist([int]$Bits) {
     }
 
     if ($installed) {
-        Write-Warn "Outdated VC++ Redistributable: $installed (need $VCREDIST_MIN)"
+        Write-Warn "Устаревшая версия VC++ Redistributable: $installed (нужно $VCREDIST_MIN)"
     } else {
-        Write-Warn "Visual C++ Redistributable ($Bits-bit) not found!"
-        Write-Warn "Apache will not start without it."
+        Write-Warn "Visual C++ Redistributable ($Bits-бит) не найден!"
+        Write-Warn "Apache не запустится без этой библиотеки."
     }
 
     Write-Host ""
-    Write-Host "  Options:" -ForegroundColor Cyan
-    Write-Host "    [1] Download and install automatically (recommended)"
-    Write-Host "    [2] Open download page (install manually)"
-    Write-Host "    [3] Skip (Apache may not start)"
+    Write-Host "  Выберите действие:" -ForegroundColor Cyan
+    Write-Host "    [1] Скачать и установить автоматически (рекомендуется)"
+    Write-Host "    [2] Открыть страницу загрузки (установить вручную)"
+    Write-Host "    [3] Пропустить (Apache может не запуститься)"
     Write-Host ""
 
-    $vc = Read-Choice -Prompt "Your choice (1-3)" -Default "1"
+    $vc = Read-Choice -Prompt "Ваш выбор (1-3)" -Default "1"
     Write-Log "VC++ choice: $vc" 'INPUT'
 
     if ($vc -eq '3') {
-        Write-Warn "VC++ Redistributable skipped."
+        Write-Warn "VC++ Redistributable пропущен."
         return
     }
 
@@ -281,25 +281,25 @@ function Assert-VCRedist([int]$Bits) {
     }
 
     $vcTemp = Join-Path $env:TEMP "vc_redist_$vcArch.exe"
-    Write-Step "Downloading VC++ Redistributable ($vcArch)..."
+    Write-Step "Скачиваю VC++ Redistributable ($vcArch)..."
     Write-Log "Downloading: $vcUrl" 'INFO'
     try {
         $ProgressPreference = 'SilentlyContinue'
         Invoke-WebRequest -Uri $vcUrl -OutFile $vcTemp -UseBasicParsing
     } catch {
-        Write-Warn "Download failed: $($_.Exception.Message)"
+        Write-Warn "Ошибка загрузки: $($_.Exception.Message)"
         return
     }
 
-    Write-Step "Installing VC++ Redistributable (silent)..."
+    Write-Step "Устанавливаю VC++ Redistributable (тихая установка)..."
     try {
         $p = Start-Process -FilePath $vcTemp -ArgumentList '/install','/quiet','/norestart' -Wait -PassThru
         Write-Log "VC++ ExitCode: $($p.ExitCode)" 'INFO'
-        if ($p.ExitCode -eq 0)    { Write-OK "VC++ Redistributable installed." }
-        elseif ($p.ExitCode -eq 3010) { Write-OK "VC++ installed. Reboot required."; Write-Warn "Please reboot before starting Apache." }
-        else  { Write-Warn "VC++ installer returned code $($p.ExitCode)." }
+        if ($p.ExitCode -eq 0)    { Write-OK "VC++ Redistributable установлен." }
+        elseif ($p.ExitCode -eq 3010) { Write-OK "VC++ установлен. Требуется перезагрузка."; Write-Warn "Перезагрузите компьютер перед запуском Apache." }
+        else  { Write-Warn "Установщик VC++ вернул код $($p.ExitCode)." }
     } catch {
-        Write-Warn "Installation error: $($_.Exception.Message)"
+        Write-Warn "Ошибка установки: $($_.Exception.Message)"
     } finally {
         Remove-Item $vcTemp -Force -ErrorAction SilentlyContinue
     }
@@ -321,9 +321,9 @@ function Assert-DiskSpace([string]$Path, [int]$RequiredMB, [string]$Purpose) {
     $free = Get-FreeDiskSpaceMB -Path $Path
     Write-Log "Disk $Path : $free MB free, need $RequiredMB MB ($Purpose)" 'INFO'
     if ($free -lt $RequiredMB) {
-        throw "Not enough disk space for $Purpose. Free: $free MB, need: $RequiredMB MB."
+        throw "Недостаточно места на диске для $Purpose. Свободно: $free МБ, нужно: $RequiredMB МБ."
     }
-    Write-OK "Disk space OK: $free MB free (need $RequiredMB MB)"
+    Write-OK "Места достаточно: $free МБ свободно (нужно $RequiredMB МБ)"
 }
 
 # -----------------------------------------------
@@ -368,31 +368,31 @@ function Test-ServiceRunning([string]$Name) {
 }
 function Stop-NamedService([string]$Name) {
     if (-not (Test-ServiceExists $Name)) { return }
-    Write-Step "Stopping service $Name..."
+    Write-Step "Останавливаю службу $Name..."
     try { Stop-Service -Name $Name -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2 } catch {}
 }
 function Remove-NamedService([string]$Name) {
     if (-not (Test-ServiceExists $Name)) { return }
     Stop-NamedService -Name $Name
-    Write-Step "Removing service $Name..."
+    Write-Step "Удаляю службу $Name..."
     sc.exe delete $Name 2>&1 | Out-Null
     Start-Sleep -Seconds 1
-    Write-OK "Service $Name removed."
+    Write-OK "Служба $Name удалена."
 }
 
 # -----------------------------------------------
 #  Firewall
 # -----------------------------------------------
 function Add-ApacheFirewallRule([string]$RuleName, [string]$HttpdExe, [string]$Port) {
-    Write-Step "Adding firewall rule ($RuleName, port $Port)..."
+    Write-Step "Добавляю правило брандмауэра ($RuleName, порт $Port)..."
     Remove-NetFirewallRule -DisplayName $RuleName -ErrorAction SilentlyContinue
     try {
         New-NetFirewallRule -DisplayName $RuleName -Direction Inbound -Program $HttpdExe `
             -Action Allow -Protocol TCP -LocalPort $Port -Profile Any | Out-Null
-        Write-OK "Firewall rule added."
+        Write-OK "Правило брандмауэра добавлено."
         Write-Log "Firewall: $RuleName added" 'OK'
     } catch {
-        Write-Warn "Firewall rule error: $($_.Exception.Message)"
+        Write-Warn "Ошибка правила брандмауэра: $($_.Exception.Message)"
     }
 }
 function Remove-ApacheFirewallRule([string]$RuleName) {
@@ -404,7 +404,7 @@ function Remove-ApacheFirewallRule([string]$RuleName) {
 #  Cleanup on error
 # -----------------------------------------------
 function Invoke-Cleanup([string]$InstallDir, [string]$ServiceName, [string]$FwRule) {
-    Write-Warn "Cleaning up after error..."
+    Write-Warn "Очистка после ошибки..."
     Remove-NamedService -Name $ServiceName
     Remove-ApacheFirewallRule -RuleName $FwRule
     Remove-RegInstance -ServiceName $ServiceName
@@ -421,16 +421,16 @@ function Backup-Install([string]$InstallDir) {
     if (-not (Test-Path $InstallDir)) { return $null }
 
     Write-Host ""
-    Write-Host "  Backup options:" -ForegroundColor Cyan
-    Write-Host "    [1] Config only (conf\)  ~1 MB, fast"
-    Write-Host "    [2] Full folder"
-    Write-Host "    [3] Both"
-    Write-Host "    [4] Skip backup"
+    Write-Host "  Что сохранить в бэкап?" -ForegroundColor Cyan
+    Write-Host "    [1] Только конфигурацию (conf\)  ~1 МБ, быстро"
+    Write-Host "    [2] Всю папку целиком"
+    Write-Host "    [3] Оба варианта"
+    Write-Host "    [4] Не делать бэкап"
     Write-Host ""
 
-    $bc = Read-Choice -Prompt "Your choice (1-4)" -Default "1"
+    $bc = Read-Choice -Prompt "Ваш выбор (1-4)" -Default "1"
     Write-Log "Backup choice: $bc" 'INPUT'
-    if ($bc -eq '4') { Write-Warn "Backup skipped."; return $null }
+    if ($bc -eq '4') { Write-Warn "Бэкап пропущен."; return $null }
 
     $ts = Get-Date -Format 'yyyyMMdd-HHmmss'
     $result = $null
@@ -443,14 +443,14 @@ function Backup-Install([string]$InstallDir) {
                 Measure-Object -Property Length -Sum).Sum / 1MB + 1)
             if ((Get-FreeDiskSpaceMB $WORK_DIR) -ge $szMB) {
                 try {
-                    Write-Step "Archiving config -> $dst"
+                    Write-Step "Архивирую конфигурацию -> $dst"
                     Compress-Archive -Path "$src\*" -DestinationPath $dst -Force
                     $zipMB = [math]::Round((Get-Item $dst).Length / 1MB, 2)
-                    Write-OK "Config backup: $dst ($zipMB MB)"
+                    Write-OK "Бэкап conf: $dst ($zipMB МБ)"
                     Write-Log "Backup conf: $zipMB MB" 'OK'
                     $result = $dst
-                } catch { Write-Warn "Config backup error: $($_.Exception.Message)" }
-            } else { Write-Warn "Not enough space for config backup." }
+                } catch { Write-Warn "Ошибка бэкапа conf: $($_.Exception.Message)" }
+            } else { Write-Warn "Недостаточно места для бэкапа conf." }
         }
     }
 
@@ -460,14 +460,14 @@ function Backup-Install([string]$InstallDir) {
             Measure-Object -Property Length -Sum).Sum / 1MB + 5)
         if ((Get-FreeDiskSpaceMB $WORK_DIR) -ge ($szMB + 10)) {
             try {
-                Write-Step "Archiving full folder -> $dst"
+                Write-Step "Архивирую всю папку -> $dst"
                 Compress-Archive -Path "$InstallDir\*" -DestinationPath $dst -Force
                 $zipMB = [math]::Round((Get-Item $dst).Length / 1MB, 1)
-                Write-OK "Full backup: $dst ($zipMB MB)"
+                Write-OK "Полный бэкап: $dst ($zipMB МБ)"
                 Write-Log "Backup full: $zipMB MB" 'OK'
                 if (-not $result) { $result = $dst }
-            } catch { Write-Warn "Full backup error: $($_.Exception.Message)" }
-        } else { Write-Warn "Not enough space for full backup." }
+            } catch { Write-Warn "Ошибка полного бэкапа: $($_.Exception.Message)" }
+        } else { Write-Warn "Недостаточно места для полного бэкапа." }
     }
 
     return $result
@@ -486,16 +486,16 @@ function Select-InstallDir {
     $options = @('C:\Apache24', 'D:\Apache24', 'C:\Apache')
     while ($true) {
         Write-Host ""
-        Write-Host "  Select installation folder:" -ForegroundColor Cyan
+        Write-Host "  Выберите папку установки:" -ForegroundColor Cyan
         Write-Host ""
         for ($i = 0; $i -lt $options.Count; $i++) {
-            $mark = if (Test-Path $options[$i]) { " [exists]" } else { "" }
+            $mark = if (Test-Path $options[$i]) { " [уже существует]" } else { "" }
             Write-Host "    [$($i+1)] $($options[$i])$mark"
         }
-        Write-Host "    [$($options.Count+1)] Enter custom path"
+        Write-Host "    [$($options.Count+1)] Ввести свой путь"
         Write-Host ""
 
-        $choice = Read-Choice -Prompt "Your choice (1-$($options.Count+1))" -Default "1"
+        $choice = Read-Choice -Prompt "Ваш выбор (1-$($options.Count+1))" -Default "1"
         Write-Log "Folder choice: $choice" 'INPUT'
 
         $selected = $null
@@ -504,24 +504,24 @@ function Select-InstallDir {
             if ($idx -ge 1 -and $idx -le $options.Count) { $selected = $options[$idx - 1] }
             elseif ($idx -eq $options.Count + 1) {
                 $custom = (Read-Host "  Enter full path (e.g. C:\MyApache)").Trim()
-                if ([string]::IsNullOrEmpty($custom)) { Write-Warn "Path cannot be empty."; continue }
-                if ($custom -match ' ') { Write-Warn "Path must not contain spaces."; continue }
+                if ([string]::IsNullOrEmpty($custom)) { Write-Warn "Путь не может быть пустым."; continue }
+                if ($custom -match ' ') { Write-Warn "Путь не должен содержать пробелы."; continue }
                 $selected = $custom
             }
         }
-        if (-not $selected) { Write-Warn "Invalid choice."; continue }
+        if (-not $selected) { Write-Warn "Некорректный выбор."; continue }
 
         # Check if already used by another instance
         $existing = Get-RegInstances | Where-Object { $_.InstallDir -eq $selected }
         if ($existing) {
-            Write-Warn "This folder is used by instance $($existing.ServiceName) (port $($existing.Port))."
-            if (Confirm-Action "Reinstall this instance?") { return $selected }
+            Write-Warn "Папка используется экземпляром $($existing.ServiceName) (порт $($existing.Port))."
+            if (Confirm-Action "Переустановить этот экземпляр?") { return $selected }
             continue
         }
 
         if (Test-Path $selected) {
-            Write-Warn "Folder $selected already exists."
-            if (Confirm-Action "Use this folder? (backup will be offered)") { return $selected }
+            Write-Warn "Папка $selected уже существует."
+            if (Confirm-Action "Использовать эту папку? (бэкап будет предложен)") { return $selected }
             continue
         }
 
@@ -538,7 +538,7 @@ function Select-Port {
 
     while ($true) {
         Write-Host ""
-        Write-Host "  Select port for Apache:" -ForegroundColor Cyan
+        Write-Host "  Выберите порт для Apache:" -ForegroundColor Cyan
         Write-Host ""
         for ($i = 0; $i -lt $ports.Count; $i++) {
             $p = $ports[$i]
@@ -551,10 +551,10 @@ function Select-Port {
                 Write-Host "    [$($i+1)] $p [free]"
             }
         }
-        Write-Host "    [$($ports.Count+1)] Enter custom port"
+        Write-Host "    [$($ports.Count+1)] Ввести свой порт"
         Write-Host ""
 
-        $choice = Read-Choice -Prompt "Your choice (1-$($ports.Count+1))" -Default "1"
+        $choice = Read-Choice -Prompt "Ваш выбор (1-$($ports.Count+1))" -Default "1"
         Write-Log "Port choice: $choice" 'INPUT'
 
         $selected = $null
@@ -564,7 +564,7 @@ function Select-Port {
             elseif ($idx -eq $ports.Count + 1) {
                 $custom = (Read-Host "  Enter port (1024-65535)").Trim()
                 if ($custom -notmatch '^\d+$' -or [int]$custom -lt 1024 -or [int]$custom -gt 65535) {
-                    Write-Warn "Port must be a number between 1024-65535."; continue
+                    Write-Warn "Порт должен быть числом в диапазоне 1024-65535."; continue
                 }
                 $selected = $custom
             }
@@ -573,8 +573,8 @@ function Select-Port {
 
         if ($usedPorts -contains $selected) {
             $inst = Get-RegInstances | Where-Object { $_.Port -eq $selected } | Select-Object -First 1
-            Write-Warn "Port $selected is used by $($inst.ServiceName) in $($inst.InstallDir)."
-            if (-not (Confirm-Action "Use this port anyway?")) { continue }
+            Write-Warn "Порт $selected используется $($inst.ServiceName) в $($inst.InstallDir)."
+            if (-not (Confirm-Action "Всё равно использовать этот порт?")) { continue }
         }
 
         if (Test-PortBusy $selected) {
@@ -592,20 +592,20 @@ function Select-Port {
 # -----------------------------------------------
 function Get-DistribUrl([int]$Bits) {
     $url = if ($Bits -eq 64) { $INDEX_URL_64 } else { $INDEX_URL_32 }
-    Write-Step "Getting download URL ($Bits-bit)..."
+    Write-Step "Получаю ссылку на дистрибутив ($Bits-бит)..."
     Write-Log "GET $url" 'INFO'
     try {
         $ProgressPreference = 'SilentlyContinue'
         $link = (Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 15).Content.Trim()
         Write-Log "Server response: $link" 'INFO'
-    } catch { throw "Failed to get URL: $($_.Exception.Message)" }
-    if ($link -notmatch '^https?://.+\.zip$') { throw "Unexpected server response: $link" }
-    Write-OK "Distribution: $(Split-Path $link -Leaf)"
+    } catch { throw "Не удалось получить ссылку: $($_.Exception.Message)" }
+    if ($link -notmatch '^https?://.+\.zip$') { throw "Неожиданный ответ сервера: $link" }
+    Write-OK "Дистрибутив: $(Split-Path $link -Leaf)"
     return $link
 }
 
 function Download-Distrib([string]$Url, [string]$OutFile) {
-    Write-Step "Downloading..."
+    Write-Step "Скачиваю архив..."
     Write-Log "Download: $Url" 'INFO'
     $done = $false
     if (Get-Command Start-BitsTransfer -ErrorAction SilentlyContinue) {
@@ -613,16 +613,16 @@ function Download-Distrib([string]$Url, [string]$OutFile) {
             Start-BitsTransfer -Source $Url -Destination $OutFile -DisplayName 'Apache HTTP Server'
             $done = $true
         } catch {
-            Write-Warn "BITS failed, switching to WebRequest"
+            Write-Warn "BITS не сработал, переключаюсь на WebRequest"
         }
     }
     if (-not $done) {
         $ProgressPreference = 'SilentlyContinue'
         Invoke-WebRequest -Uri $Url -OutFile $OutFile -UseBasicParsing
     }
-    if (-not (Test-Path $OutFile)) { throw "File not saved: $OutFile" }
+    if (-not (Test-Path $OutFile)) { throw "Файл не был сохранён: $OutFile" }
     $sizeMB = [math]::Round((Get-Item $OutFile).Length / 1MB, 1)
-    Write-OK "Downloaded $sizeMB MB"
+    Write-OK "Загружено $sizeMB МБ"
 }
 
 # -----------------------------------------------
@@ -757,7 +757,7 @@ function New-IndexHtml([string]$InstallDir, [string]$Port, [string]$ServiceName,
 # ===============================================
 
 Write-Log "==========================================" 'INFO'
-Write-Log "Starting install-apache" 'INFO'
+Write-Log "Запуск install-apache" 'INFO'
 Write-Log "WorkDir: $WORK_DIR | IsExe: $isExe" 'INFO'
 Write-Log "User: $env:USERNAME  Machine: $env:COMPUTERNAME" 'INFO'
 Write-Log "PowerShell: $($PSVersionTable.PSVersion)" 'INFO'
@@ -766,17 +766,17 @@ Write-Log "==========================================" 'INFO'
 Clear-Host
 Write-Host ""
 Write-Host "  +==========================================+" -ForegroundColor Cyan
-Write-Host "  |   Apache HTTP Server Installer          |" -ForegroundColor Cyan
+Write-Host "  |   Установщик Apache HTTP Server         |" -ForegroundColor Cyan
 Write-Host "  |   localhost | Windows x86/x64           |" -ForegroundColor Cyan
 Write-Host "  +==========================================+" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "  Log: $LOG_FILE" -ForegroundColor DarkGray
+Write-Host "  Лог: $LOG_FILE" -ForegroundColor DarkGray
 
 # Show installed instances
 $currentInstances = @(Get-InstalledApaches)
 if ($currentInstances.Count -gt 0) {
     Write-Host ""
-    Write-Host "  Installed instances:" -ForegroundColor DarkCyan
+    Write-Host "  Установленные экземпляры:" -ForegroundColor DarkCyan
     foreach ($inst in $currentInstances) {
         $addr = if ($inst.Port -eq '80') { 'http://localhost' } else { "http://localhost:$($inst.Port)" }
         Write-Host "    $($inst.ServiceName)  $addr  $($inst.InstallDir)  [$($inst.Status)]" -ForegroundColor DarkGray
@@ -785,40 +785,40 @@ if ($currentInstances.Count -gt 0) {
 
 # Main menu
 Write-Host ""
-Write-Host "  Select action:" -ForegroundColor Cyan
+Write-Host "  Выберите действие:" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "    [1] Install new Apache instance"
+Write-Host "    [1] Установить новый экземпляр Apache"
 if ($currentInstances.Count -gt 0) {
-    Write-Host "    [2] Remove Apache instance"
+    Write-Host "    [2] Удалить экземпляр Apache"
 } else {
-    Write-Host "    [2] Remove Apache instance  [none installed]" -ForegroundColor DarkGray
+    Write-Host "    [2] Удалить экземпляр Apache  [нет установленных]" -ForegroundColor DarkGray
 }
-Write-Host "    [3] Exit"
+Write-Host "    [3] Выход"
 Write-Host ""
 
 $validChoices = if ($currentInstances.Count -gt 0) { @('1','2','3') } else { @('1','3') }
 $mainChoice = ''
 while ($mainChoice -notin $validChoices) {
-    $mainChoice = Read-Choice -Prompt "Your choice (1-3)" -Default "1"
+    $mainChoice = Read-Choice -Prompt "Ваш выбор (1-3)" -Default "1"
     if ($mainChoice -notin $validChoices) {
-        if ($mainChoice -eq '2') { Write-Warn "No installed instances to remove." }
+        if ($mainChoice -eq '2') { Write-Warn "Нет установленных экземпляров для удаления." }
         else { Write-Warn "Invalid choice." }
     }
 }
 Write-Log "Main menu: $mainChoice" 'INPUT'
 
-if ($mainChoice -eq '3') { Write-Step "Exit."; exit 0 }
+if ($mainChoice -eq '3') { Write-Step "Выход."; exit 0 }
 
 # ============================================================
 #  REMOVE
 # ============================================================
 if ($mainChoice -eq '2') {
-    Write-Header "Remove Apache Instance"
+    Write-Header "Удаление экземпляра Apache"
 
     $installed = @(Get-InstalledApaches)
 
     Write-Host ""
-    Write-Host "  Select instance to remove:" -ForegroundColor Cyan
+    Write-Host "  Выберите экземпляр для удаления:" -ForegroundColor Cyan
     Write-Host ""
     for ($i = 0; $i -lt $installed.Count; $i++) {
         $inst = $installed[$i]
@@ -829,7 +829,7 @@ if ($mainChoice -eq '2') {
     }
     Write-Host ""
 
-    $dc = Read-Choice -Prompt "Your choice (1-$($installed.Count))" -Default "1"
+    $dc = Read-Choice -Prompt "Ваш выбор (1-$($installed.Count))" -Default "1"
     Write-Log "Remove choice: $dc" 'INPUT'
 
     if ($dc -notmatch '^\d+$' -or [int]$dc -lt 1 -or [int]$dc -gt $installed.Count) {
@@ -840,24 +840,24 @@ if ($mainChoice -eq '2') {
     $fwRule = Get-FwRuleName -Port $target.Port
 
     Write-Host ""
-    Write-Host "  Will be removed:" -ForegroundColor Yellow
-    Write-Host "    Service : $($target.ServiceName)" -ForegroundColor Yellow
-    Write-Host "    Folder  : $($target.InstallDir)"  -ForegroundColor Yellow
-    Write-Host "    Port    : $($target.Port)"         -ForegroundColor Yellow
+    Write-Host "  Будет удалено:" -ForegroundColor Yellow
+    Write-Host "    Служба  : $($target.ServiceName)" -ForegroundColor Yellow
+    Write-Host "    Папка   : $($target.InstallDir)"  -ForegroundColor Yellow
+    Write-Host "    Порт    : $($target.Port)"         -ForegroundColor Yellow
     Write-Host ""
 
-    if (-not (Confirm-Action "Remove this instance?")) {
-        Write-Step "Cancelled."; exit 0
+    if (-not (Confirm-Action "Удалить этот экземпляр?")) {
+        Write-Step "Отменено."; exit 0
     }
 
     # Backup before removal
     if (Test-Path $target.InstallDir) {
         $freeForBackup = Get-FreeDiskSpaceMB -Path $WORK_DIR
         if ($freeForBackup -lt $MIN_BACKUP_MB) {
-            Write-Warn "Not enough space for backup ($freeForBackup MB)."
+            Write-Warn "Мало места для бэкапа ($freeForBackup МБ)."
         } else {
             $backupResult = Backup-Install -InstallDir $target.InstallDir
-            if ($backupResult) { Write-OK "Backup saved: $backupResult" }
+            if ($backupResult) { Write-OK "Бэкап сохранён: $backupResult" }
         }
     }
 
@@ -866,18 +866,18 @@ if ($mainChoice -eq '2') {
     Remove-RegInstance -ServiceName $target.ServiceName
 
     if (Test-Path $target.InstallDir) {
-        Write-Step "Removing folder $($target.InstallDir)..."
+        Write-Step "Удаляю папку $($target.InstallDir)..."
         try {
             Remove-Item -Path $target.InstallDir -Recurse -Force
-            Write-OK "Folder removed."
+            Write-OK "Папка удалена."
             Write-Log "Folder $($target.InstallDir) removed" 'OK'
         } catch {
-            Write-Fail "Could not remove folder: $($_.Exception.Message)"
+            Write-Fail "Не удалось удалить папку: $($_.Exception.Message)"
         }
     }
 
-    Write-OK "Instance $($target.ServiceName) removed."
-    Write-Log "Remove complete: $($target.ServiceName)" 'OK'
+    Write-OK "Экземпляр $($target.ServiceName) удалён."
+    Write-Log "Удаление завершено: $($target.ServiceName)" 'OK'
     Write-Log "==========================================" 'INFO'
     exit 0
 }
@@ -887,83 +887,83 @@ if ($mainChoice -eq '2') {
 # ============================================================
 
 # Step 1: OS bits
-Write-Header "System Detection"
+Write-Header "Определение системы"
 Write-Log "PROCESSOR_ARCHITECTURE: $env:PROCESSOR_ARCHITECTURE" 'INFO'
 $osBits = if ($env:PROCESSOR_ARCHITECTURE -eq 'AMD64' -or $env:PROCESSOR_ARCHITEW6432 -eq 'AMD64') { 64 } else { 32 }
-Write-OK "OS: Windows $osBits-bit"
+Write-OK "ОС: Windows $osBits-бит"
 
 # Step 2: VC++ check
 Write-Header "Visual C++ Redistributable"
 Assert-VCRedist -Bits $osBits
 
 # Step 3: Folder
-Write-Header "Installation Folder"
+Write-Header "Папка установки"
 $installDir = Select-InstallDir
-Write-OK "Folder: $installDir"
+Write-OK "Папка: $installDir"
 
 # Step 4: Port
-Write-Header "Port"
+Write-Header "Порт"
 $port        = Select-Port
 $serviceName = Get-ServiceName -Port $port
 $fwRuleName  = Get-FwRuleName  -Port $port
-Write-OK "Port: $port  Service: $serviceName"
+Write-OK "Порт: $port  Служба: $serviceName"
 
 # Step 5: Confirm
 Write-Host ""
 Write-Host "  +------------------------------------------+" -ForegroundColor Cyan
-Write-Host "  | Installation parameters                  |" -ForegroundColor Cyan
-Write-Host "  |  Folder  : $installDir"
-Write-Host "  |  Port    : $port"
-Write-Host "  |  Service : $serviceName"
-Write-Host "  |  OS      : Windows $osBits-bit"
+Write-Host "  | Параметры установки                      |" -ForegroundColor Cyan
+Write-Host "  |  Папка   : $installDir"
+Write-Host "  |  Порт    : $port"
+Write-Host "  |  Служба  : $serviceName"
+Write-Host "  |  ОС      : Windows $osBits-бит"
 Write-Host "  +------------------------------------------+" -ForegroundColor Cyan
 Write-Host ""
 Write-Log "Params: service=$serviceName folder=$installDir port=$port os=$osBits-bit" 'INFO'
 
-if (-not (Confirm-Action "Start installation?")) {
+if (-not (Confirm-Action "Начать установку?")) {
     Write-Step "Cancelled."
     exit 0
 }
 
 # Step 6: Disk space
-Write-Header "Disk Space Check"
-Assert-DiskSpace -Path $installDir -RequiredMB $MIN_INSTALL_MB -Purpose "Apache installation"
-Assert-DiskSpace -Path $env:TEMP   -RequiredMB 30              -Purpose "temp archive"
+Write-Header "Проверка места на диске"
+Assert-DiskSpace -Path $installDir -RequiredMB $MIN_INSTALL_MB -Purpose "установки Apache"
+Assert-DiskSpace -Path $env:TEMP   -RequiredMB 30              -Purpose "временного архива"
 
 # Step 7: Backup + remove old
-Write-Header "Preparation"
+Write-Header "Подготовка"
 $backupPath = $null
 
 if (Test-Path $installDir) {
     $freeForBackup = Get-FreeDiskSpaceMB -Path $WORK_DIR
     if ($freeForBackup -lt $MIN_BACKUP_MB) {
-        Write-Warn "Not enough space for backup ($freeForBackup MB)."
-        if (-not (Confirm-Action "Continue without backup?")) { exit 0 }
+        Write-Warn "Мало места для бэкапа ($freeForBackup МБ)."
+        if (-not (Confirm-Action "Продолжить без бэкапа?")) { exit 0 }
     } else {
         $backupPath = Backup-Install -InstallDir $installDir
     }
     Remove-NamedService -Name $serviceName
-    Write-Step "Removing $installDir..."
+    Write-Step "Удаляю $installDir..."
     Remove-Item -Path $installDir -Recurse -Force
-    Write-OK "Old installation removed."
+    Write-OK "Старая установка удалена."
 } else {
     Remove-NamedService -Name $serviceName
 }
 
 # Step 8: Download + extract
-Write-Header "Download"
+Write-Header "Загрузка дистрибутива"
 $distribUrl = Get-DistribUrl -Bits $osBits
 Download-Distrib -Url $distribUrl -OutFile $TEMP_ZIP
 
-Write-Header "Installation"
-Write-Step "Extracting archive..."
+Write-Header "Установка"
+Write-Step "Распаковываю архив..."
 if (Test-Path $TEMP_EXTRACT) { Remove-Item $TEMP_EXTRACT -Recurse -Force }
 
 try {
     Expand-Archive -Path $TEMP_ZIP -DestinationPath $TEMP_EXTRACT -Force
 } catch {
     Invoke-Cleanup -InstallDir $installDir -ServiceName $serviceName -FwRule $fwRuleName
-    throw "Extraction error: $($_.Exception.Message)"
+    throw "Ошибка распаковки: $($_.Exception.Message)"
 }
 
 # Find httpd.exe to locate the root
@@ -971,7 +971,7 @@ $httpdFound = Get-ChildItem -Path $TEMP_EXTRACT -Recurse -Filter 'httpd.exe' |
               Select-Object -First 1
 if (-not $httpdFound) {
     Invoke-Cleanup -InstallDir $installDir -ServiceName $serviceName -FwRule $fwRuleName
-    throw "httpd.exe not found in archive. File may be corrupted."
+    throw "httpd.exe не найден в архиве. Файл может быть повреждён."
 }
 
 $extracted = $httpdFound.Directory.Parent.FullName
@@ -981,47 +981,47 @@ try {
     Move-Item -Path $extracted -Destination $installDir -Force
 } catch {
     Invoke-Cleanup -InstallDir $installDir -ServiceName $serviceName -FwRule $fwRuleName
-    throw "Move error: $($_.Exception.Message)"
+    throw "Ошибка перемещения: $($_.Exception.Message)"
 }
 
 Remove-Item $TEMP_ZIP     -Force -ErrorAction SilentlyContinue
 Remove-Item $TEMP_EXTRACT -Recurse -Force -ErrorAction SilentlyContinue
-Write-OK "Extracted to $installDir"
+Write-OK "Распаковано в $installDir"
 
 # Step 9: Config files
-Write-Step "Writing httpd.conf..."
+Write-Step "Записываю httpd.conf..."
 try {
     New-HttpdConf -InstallDir $installDir -Port $port -ServiceName $serviceName |
         Set-Content -Path "$installDir\conf\httpd.conf" -Encoding UTF8
-    Write-OK "httpd.conf written."
+    Write-OK "httpd.conf записан."
 } catch {
     Invoke-Cleanup -InstallDir $installDir -ServiceName $serviceName -FwRule $fwRuleName
-    throw "httpd.conf write error: $($_.Exception.Message)"
+    throw "Ошибка записи httpd.conf: $($_.Exception.Message)"
 }
 
-Write-Step "Writing index.html..."
+Write-Step "Создаю index.html..."
 try {
     New-IndexHtml -InstallDir $installDir -Port $port -ServiceName $serviceName -LogFile $LOG_FILE |
         Set-Content -Path "$installDir\htdocs\index.html" -Encoding UTF8
-    Write-OK "index.html written."
+    Write-OK "index.html создан."
 } catch {
     Invoke-Cleanup -InstallDir $installDir -ServiceName $serviceName -FwRule $fwRuleName
-    throw "index.html write error: $($_.Exception.Message)"
+    throw "Ошибка записи index.html: $($_.Exception.Message)"
 }
 
 # Step 10: Firewall rule (before service start — prevents Windows Security Alert popup)
-Write-Header "Windows Firewall"
+Write-Header "Брандмауэр Windows"
 $httpdExe = "$installDir\bin\httpd.exe"
 Add-ApacheFirewallRule -RuleName $fwRuleName -HttpdExe $httpdExe -Port $port
 
 # Step 11: Register service
-Write-Header "Windows Service"
-Write-Step "Registering service $serviceName..."
+Write-Header "Регистрация службы Windows"
+Write-Step "Регистрирую службу $serviceName..."
 Write-Log "Run: $httpdExe -k install -n $serviceName" 'INFO'
 
 if (-not (Test-Path $httpdExe)) {
     Invoke-Cleanup -InstallDir $installDir -ServiceName $serviceName -FwRule $fwRuleName
-    throw "httpd.exe not found: $httpdExe"
+    throw "httpd.exe не найден: $httpdExe"
 }
 
 $stdOut = Join-Path $env:TEMP 'httpd-stdout.txt'
@@ -1040,38 +1040,38 @@ Write-Log "httpd.exe ExitCode: $($proc.ExitCode)" 'INFO'
 
 if ($proc.ExitCode -ne 0) {
     Invoke-Cleanup -InstallDir $installDir -ServiceName $serviceName -FwRule $fwRuleName
-    throw "httpd.exe failed with code $($proc.ExitCode).`nstderr: $errTxt"
+    throw "httpd.exe завершился с кодом $($proc.ExitCode).`nstderr: $errTxt"
 }
 if (-not (Test-ServiceExists $serviceName)) {
     Invoke-Cleanup -InstallDir $installDir -ServiceName $serviceName -FwRule $fwRuleName
-    throw "Service $serviceName not found in SCM after registration."
+    throw "Служба $serviceName не появилась в SCM после регистрации."
 }
-Write-OK "Service $serviceName registered."
+Write-OK "Служба $serviceName зарегистрирована."
 
-Write-Step "Starting service..."
+Write-Step "Запускаю службу..."
 try {
     Start-Service -Name $serviceName
     Start-Sleep -Seconds 3
 } catch {
     Invoke-Cleanup -InstallDir $installDir -ServiceName $serviceName -FwRule $fwRuleName
-    throw "Could not start service: $($_.Exception.Message)"
+    throw "Не удалось запустить службу: $($_.Exception.Message)"
 }
 
 if (-not (Test-ServiceRunning $serviceName)) {
     $apacheErr = if (Test-Path "$installDir\logs\error_log") {
         Get-Content "$installDir\logs\error_log" -Tail 15 | Out-String
     } else { "(not found)" }
-    Write-Log "Service did not start. error_log:`n$apacheErr" 'ERROR'
+    Write-Log "Служба не запустилась. error_log:`n$apacheErr" 'ERROR'
     Invoke-Cleanup -InstallDir $installDir -ServiceName $serviceName -FwRule $fwRuleName
-    throw "Service $serviceName did not start.`nerror_log:`n$apacheErr"
+    throw "Служба $serviceName не запустилась.`nerror_log:`n$apacheErr"
 }
-Write-OK "Service $serviceName started."
+Write-OK "Служба $serviceName запущена."
 
 # Save to Windows registry
 Save-RegInstance -ServiceName $serviceName -InstallDir $installDir -Port $port
 
 # Step 12: HTTP check
-Write-Header "Verification"
+Write-Header "Проверка работы"
 $checkUrl = if ($port -eq '80') { 'http://localhost' } else { "http://localhost:$port" }
 Write-Step "GET $checkUrl ..."
 Start-Sleep -Seconds 1
@@ -1084,22 +1084,22 @@ try {
 } catch { Write-Log "HTTP check: $($_.Exception.Message)" 'WARN' }
 
 if ($statusCode -eq 200) {
-    Write-OK "Server responded HTTP 200 — works!"
+    Write-OK "Сервер ответил HTTP 200 — всё работает!"
     Write-Log "HTTP check: SUCCESS" 'OK'
 } else {
-    Write-Warn "Response: $statusCode. Check: $installDir\logs\error_log"
+    Write-Warn "Ответ: $statusCode. Проверьте лог: $installDir\logs\error_log"
 }
 
 # Step 13: Summary
-Write-Header "Done!"
+Write-Header "Готово!"
 Write-Host ""
-Write-Host "  Address : $checkUrl"      -ForegroundColor Green
-Write-Host "  Service : $serviceName"   -ForegroundColor Green
-Write-Host "  Folder  : $installDir"    -ForegroundColor Green
-Write-Host "  Log     : $LOG_FILE"      -ForegroundColor DarkGray
-if ($backupPath) { Write-Host "  Backup  : $backupPath" -ForegroundColor DarkGray }
+Write-Host "  Адрес   : $checkUrl"      -ForegroundColor Green
+Write-Host "  Служба  : $serviceName"   -ForegroundColor Green
+Write-Host "  Папка   : $installDir"    -ForegroundColor Green
+Write-Host "  Лог     : $LOG_FILE"      -ForegroundColor DarkGray
+if ($backupPath) { Write-Host "  Бэкап   : $backupPath" -ForegroundColor DarkGray }
 Write-Host ""
-Write-Host "  Service commands:" -ForegroundColor DarkGray
+Write-Host "  Команды управления:" -ForegroundColor DarkGray
 Write-Host "    Start-Service $serviceName"   -ForegroundColor DarkGray
 Write-Host "    Stop-Service $serviceName"    -ForegroundColor DarkGray
 Write-Host "    Restart-Service $serviceName" -ForegroundColor DarkGray
@@ -1108,7 +1108,7 @@ Write-Host ""
 # Show all instances
 $allInstances = @(Get-InstalledApaches)
 if ($allInstances.Count -gt 1) {
-    Write-Host "  All installed instances:" -ForegroundColor DarkCyan
+    Write-Host "  Все установленные экземпляры:" -ForegroundColor DarkCyan
     foreach ($inst in $allInstances) {
         $addr = if ($inst.Port -eq '80') { 'http://localhost' } else { "http://localhost:$($inst.Port)" }
         Write-Host "    $($inst.ServiceName)  $addr  $($inst.InstallDir)" -ForegroundColor DarkGray
@@ -1116,7 +1116,7 @@ if ($allInstances.Count -gt 1) {
     Write-Host ""
 }
 
-Write-Log "Installation complete" 'OK'
+Write-Log "Установка завершена успешно" 'OK'
 Write-Log "==========================================" 'INFO'
 
 Start-Sleep -Seconds 1
