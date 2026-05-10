@@ -1,0 +1,52 @@
+# -----------------------------------------------
+#  Build output
+# -----------------------------------------------
+*.exe
+*.pdb
+
+# -----------------------------------------------
+#  Logs produced by the installer
+# -----------------------------------------------
+install-apache-*.log
+*.log
+
+# -----------------------------------------------
+#  Downloaded / extracted Apache archives
+# -----------------------------------------------
+*.zip
+*.tmp
+Apache*/
+httpd*/
+vcredist*/
+
+# -----------------------------------------------
+#  Claude Code (AI assistant) service files
+# -----------------------------------------------
+.claude/
+.claudeignore
+CLAUDE.local.md
+
+# -----------------------------------------------
+#  OS / Editor artefacts
+# -----------------------------------------------
+.DS_Store
+Thumbs.db
+Desktop.ini
+*~
+*.swp
+*.swo
+
+# -----------------------------------------------
+#  IDE / Editor configs (keep if team-shared, ignore if personal)
+# -----------------------------------------------
+.vscode/settings.json
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# -----------------------------------------------
+#  PowerShell / ps2exe temp
+# -----------------------------------------------
+*.ps1xml
