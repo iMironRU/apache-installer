@@ -80,6 +80,8 @@ Invoke-ps2exe .\src\install-apache.ps1 .\install-apache.exe -requireAdmin -noCon
 apache-installer/
 ├── src/
 │   └── install-apache.ps1       # Multilingual installer (en + ru)
+├── web/
+│   └── index.php                # PHP helper — serves current Apache download URL
 ├── archive/                     # Legacy separate-language versions
 │   ├── install-apache-en.ps1
 │   ├── install-apache-ru.ps1
@@ -90,12 +92,25 @@ apache-installer/
 │       └── nightly-build.yml    # Nightly EXE build via ps2exe
 ├── screenshots/                  # Demo screenshots
 ├── build-exe.bat                 # Compile to exe via ps2exe
+├── VERSION                       # Current version (e.g. 2.0.0)
 ├── README.md
 ├── CLAUDE.md                     # Project guide for AI assistants
 ├── LICENSE                       # Apache License 2.0
 ├── CHANGELOG.md
 └── CONTRIBUTING.md
 ```
+
+### Web helper (web/index.php)
+
+A small PHP page deployed on [imiron.ru](https://imiron.ru) that scrapes [apachelounge.com](https://www.apachelounge.com/download/) and returns the current Apache download link.  
+The installer uses it to always get the latest URL without hardcoding it.
+
+| Request | Response |
+|---|---|
+| `GET /` | HTML page with download buttons (Win32 / Win64) |
+| `GET /?arch=64` | Plain text — direct Win64 `.zip` URL |
+| `GET /?arch=32` | Plain text — direct Win32 `.zip` URL |
+| `GET /?debug=1` | Plain text — server diagnostics |
 
 ### What Gets Installed
 
@@ -191,6 +206,8 @@ Invoke-ps2exe .\src\install-apache.ps1 .\install-apache.exe -requireAdmin -noCon
 apache-installer/
 ├── src/
 │   └── install-apache.ps1       # Многоязычный установщик (en + ru)
+├── web/
+│   └── index.php                # PHP-хелпер — отдаёт актуальную ссылку на Apache
 ├── archive/                     # Устаревшие раздельные версии
 │   ├── install-apache-en.ps1
 │   ├── install-apache-ru.ps1
@@ -201,12 +218,25 @@ apache-installer/
 │       └── nightly-build.yml    # Ночная сборка EXE через ps2exe
 ├── screenshots/                  # Скриншоты
 ├── build-exe.bat                 # Компиляция в exe через ps2exe
+├── VERSION                       # Текущая версия (например 2.0.0)
 ├── README.md
 ├── CLAUDE.md                     # Руководство по проекту для ИИ-ассистентов
 ├── LICENSE                       # Apache License 2.0
 ├── CHANGELOG.md
 └── CONTRIBUTING.md
 ```
+
+### Web-хелпер (web/index.php)
+
+Небольшая PHP-страница, развёрнутая на [imiron.ru](https://imiron.ru), которая парсит [apachelounge.com](https://www.apachelounge.com/download/) и возвращает актуальную ссылку для скачивания Apache.  
+Установщик использует её, чтобы не хардкодить URL и всегда получать последнюю версию.
+
+| Запрос | Ответ |
+|---|---|
+| `GET /` | HTML-страница с кнопками скачивания (Win32 / Win64) |
+| `GET /?arch=64` | Plain text — прямая ссылка Win64 `.zip` |
+| `GET /?arch=32` | Plain text — прямая ссылка Win32 `.zip` |
+| `GET /?debug=1` | Plain text — диагностика сервера |
 
 ### Что устанавливается
 

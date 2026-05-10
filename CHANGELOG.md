@@ -7,6 +7,31 @@ Copyright (c) 2026 [imiron.ru](https://imiron.ru)
 
 ---
 
+## [2.0.0] — 2026-05-10
+
+### Added
+- **Single multilingual script** `src/install-apache.ps1` — combines EN and RU in one file;
+  language auto-detected from `$PSUICulture`, override with `-Lang en|ru`
+- `web/index.php` — PHP helper page hosted on imiron.ru; scrapes apachelounge.com and returns
+  the current Apache download link as plain text (`?arch=64` / `?arch=32`) or an HTML page;
+  used by the installer to resolve the download URL without hardcoding it
+- `VERSION` file — single source of truth for the release version number
+- GitHub Actions workflow `.github/workflows/nightly-build.yml` — nightly EXE builds via ps2exe
+  on `windows-latest`; version read from `VERSION`; nightly tag format `2.0.0-nightly.YYYYMMDD`;
+  publishes as `nightly` pre-release on GitHub; skips if no changes in last 24 h
+- `CLAUDE.md` — project guide for AI coding assistants
+- `.gitignore` — excludes build output, logs, OS artefacts, Claude service files
+
+### Changed
+- `build-exe.bat` updated to compile the single combined script
+- `README.md` updated to reflect new single-file structure (EN + RU sections)
+
+### Removed / Archived
+- `src/install-apache-en.ps1` and `src/install-apache-ru.ps1` moved to `archive/`
+- `install-en.bat` and `install-ru.bat` moved to `archive/`
+
+---
+
 ## [1.0.0] — 2026-03-27
 
 ### Added

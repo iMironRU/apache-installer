@@ -19,6 +19,9 @@ It compiles to a standalone `.exe` via [ps2exe](https://github.com/MScholtes/PS2
 apache-installer/
 ├── src/
 │   └── install-apache.ps1       # PRIMARY SOURCE — single multilingual script (en + ru)
+├── web/
+│   └── index.php                # PHP helper deployed on imiron.ru (see below)
+├── VERSION                      # Single source of truth for version number (e.g. 2.0.0)
 ├── archive/                     # Legacy files — do NOT modify
 │   ├── install-apache-en.ps1    # Old English-only version
 │   ├── install-apache-ru.ps1    # Old Russian-only version
@@ -98,6 +101,26 @@ powershell -ExecutionPolicy Bypass -File src\install-apache.ps1 -Lang ru
 Go to **GitHub → Actions → Nightly EXE Build → Run workflow**.
 
 ---
+
+## Web Helper (web/index.php)
+
+Deployed on imiron.ru. The PowerShell installer fetches the download URL from it at runtime.
+
+| Endpoint | Returns |
+|---|---|
+| `GET /?arch=64` | Plain-text direct URL to the latest Apache Win64 `.zip` |
+| `GET /?arch=32` | Plain-text direct URL to the latest Apache Win32 `.zip` |
+| `GET /` | HTML page with download buttons |
+| `GET /?debug=1` | Server diagnostics (remove on production) |
+
+**When editing:** keep the regex patterns in `fetch_links()` in sync with any changes apachelounge.com makes to its HTML structure.
+
+## Versioning
+
+- Version lives in the `VERSION` file (e.g. `2.0.0`).
+- The GitHub Actions workflow reads it automatically — **no need to update the workflow** when bumping a version.
+- Stable releases: create a git tag `vX.Y.Z` and a GitHub Release manually (or via a future release workflow).
+- Nightly tag is always `nightly` (pre-release, overwritten on each run). Name format: `Nightly vX.Y.Z — YYYY-MM-DD`.
 
 ## What NOT to touch
 

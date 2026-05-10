@@ -8,12 +8,13 @@ on:
   # Allow manual trigger from the GitHub UI
   workflow_dispatch:
 
-  # Also build on every push to main (catches direct pushes and merged PRs)
+  # Also build on every push to main when relevant files change
   push:
     branches:
       - main
     paths:
       - 'src/install-apache.ps1'
+      - 'VERSION'
       - 'build-exe.bat'
       - '.github/workflows/nightly-build.yml'
 
@@ -32,7 +33,21 @@ jobs:
         with:
           fetch-depth: 0   # full history so we can compare commits
 
-      # ── 2. Check if src changed since last successful nightly ─────────────
+      # ── 2. Read version from VERSION file ────────────────────────────────────
+      - name: Read version
+        id: ver
+        shell: pwsh
+        run: |
+          $base = (Get-Content VERSION -Raw).Trim()
+          $date = Get-Date -Format "yyyy-MM-dd"
+          $nightly = "$base-nightly.$($date -replace '-','')"
+          echo "base=$base"       >> $env:GITHUB_OUTPUT
+          echo "nightly=$nightly" >> $env:GITHUB_OUTPUT
+          echo "date=$date"       >> $env:GITHUB_OUTPUT
+          Write-Host "Version : $base"
+          Write-Host "Nightly : $nightly"
+
+      # ── 3. Check if src changed since last successful nightly ─────────────
       #       On schedule: skip if nothing in src/ changed in the last 24 h.
       #       On push / manual: always build.
       - name: Check for changes (schedule only)
@@ -44,14 +59,15 @@ jobs:
             exit 0
           }
           $since = (Get-Date).AddDays(-1).ToString("yyyy-MM-ddTHH:mm:ssZ")
-          $count = git log --since="$since" --oneline -- src/ build-exe.bat | Measure-Object -Line | Select-Object -ExpandProperty Lines
+          $count = git log --since="$since" --oneline -- src/ build-exe.bat VERSION |
+                   Measure-Object -Line | Select-Object -ExpandProperty Lines
           if ($count -gt 0) {
             echo "changed=true"  >> $env:GITHUB_OUTPUT
           } else {
             echo "changed=false" >> $env:GITHUB_OUTPUT
           }
 
-      # ── 3. Install ps2exe ─────────────────────────────────────────────────
+      # ── 4. Install ps2exe ─────────────────────────────────────────────────
       - name: Install ps2exe
         if: steps.changed.outputs.changed == 'true'
         shell: pwsh
@@ -60,13 +76,12 @@ jobs:
           Import-Module ps2exe
           Write-Host "ps2exe version: $((Get-Module ps2exe).Version)"
 
-      # ── 4. Build EXE ──────────────────────────────────────────────────────
+      # ── 5. Build EXE ──────────────────────────────────────────────────────
       - name: Build install-apache.exe
         if: steps.changed.outputs.changed == 'true'
         shell: pwsh
         run: |
-          $version = "2.0.0"
-          $date    = Get-Date -Format "yyyy-MM-dd"
+          $version = "${{ steps.ver.outputs.base }}"
           Import-Module ps2exe
           Invoke-ps2exe `
             -inputFile  "src\install-apache.ps1" `
@@ -82,37 +97,42 @@ jobs:
             Write-Error "Build failed — install-apache.exe not found."
             exit 1
           }
-          Write-Host "Built install-apache.exe ($version, $date)"
+          Write-Host "Built install-apache.exe v$version"
 
-      # ── 5. Upload artifact ─────────────────────────────────────────────────
+      # ── 6. Upload artifact ─────────────────────────────────────────────────
       - name: Upload artifact
         if: steps.changed.outputs.changed == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: nightly-${{ github.run_id }}-${{ github.run_number }}
+          name: install-apache-${{ steps.ver.outputs.nightly }}
           path: install-apache.exe
           retention-days: 30
 
-      # ── 6. Create / update nightly pre-release ────────────────────────────
+      # ── 7. Create / update nightly pre-release ────────────────────────────
       - name: Publish nightly release
         if: steps.changed.outputs.changed == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: nightly
-          name: "Nightly build"
+          name: "Nightly v${{ steps.ver.outputs.base }} — ${{ steps.ver.outputs.date }}"
           body: |
             Automated nightly build from `main`.
 
-            **Commit:** ${{ github.sha }}
-            **Date:** ${{ github.run_started_at }}
+            | | |
+            |---|---|
+            | **Version** | `${{ steps.ver.outputs.nightly }}` |
+            | **Commit**  | `${{ github.sha }}` |
+            | **Date**    | `${{ steps.ver.outputs.date }}` |
+            | **Runner**  | `windows-latest` |
 
-            > This is a pre-release. For stable versions see the [Releases](../../releases) page.
+            > ⚠️ This is a pre-release (nightly). For stable versions see the [Releases](../../releases) page.
           prerelease: true
           files: install-apache.exe
+          overwrite_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # ── 7. Skip notice ────────────────────────────────────────────────────
+      # ── 8. Skip notice ────────────────────────────────────────────────────
       - name: No changes — skipping build
         if: steps.changed.outputs.changed != 'true'
         run: echo "No changes in src/ since last run. Build skipped."
