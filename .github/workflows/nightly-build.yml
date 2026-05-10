@@ -1,0 +1,115 @@
+name: Nightly EXE Build
+
+on:
+  # Run every night at 02:00 UTC
+  schedule:
+    - cron: '0 2 * * *'
+
+  # Allow manual trigger from the GitHub UI
+  workflow_dispatch:
+
+  # Also build on every push to main (catches direct pushes and merged PRs)
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/install-apache.ps1'
+      - 'build-exe.bat'
+      - '.github/workflows/nightly-build.yml'
+
+jobs:
+  build:
+    name: Build install-apache.exe
+    runs-on: windows-latest
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so we can compare commits
+
+      # ── 2. Check if src changed since last successful nightly ─────────────
+      #       On schedule: skip if nothing in src/ changed in the last 24 h.
+      #       On push / manual: always build.
+      - name: Check for changes (schedule only)
+        id: changed
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -ne "schedule") {
+            echo "changed=true" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+          $since = (Get-Date).AddDays(-1).ToString("yyyy-MM-ddTHH:mm:ssZ")
+          $count = git log --since="$since" --oneline -- src/ build-exe.bat | Measure-Object -Line | Select-Object -ExpandProperty Lines
+          if ($count -gt 0) {
+            echo "changed=true"  >> $env:GITHUB_OUTPUT
+          } else {
+            echo "changed=false" >> $env:GITHUB_OUTPUT
+          }
+
+      # ── 3. Install ps2exe ─────────────────────────────────────────────────
+      - name: Install ps2exe
+        if: steps.changed.outputs.changed == 'true'
+        shell: pwsh
+        run: |
+          Install-Module -Name ps2exe -Scope CurrentUser -Force -ErrorAction Stop
+          Import-Module ps2exe
+          Write-Host "ps2exe version: $((Get-Module ps2exe).Version)"
+
+      # ── 4. Build EXE ──────────────────────────────────────────────────────
+      - name: Build install-apache.exe
+        if: steps.changed.outputs.changed == 'true'
+        shell: pwsh
+        run: |
+          $version = "2.0.0"
+          $date    = Get-Date -Format "yyyy-MM-dd"
+          Import-Module ps2exe
+          Invoke-ps2exe `
+            -inputFile  "src\install-apache.ps1" `
+            -outputFile "install-apache.exe" `
+            -requireAdmin `
+            -noConsole:$false `
+            -title       "Apache Installer" `
+            -description "Apache HTTP Server Installer for Windows (en/ru)" `
+            -company     "imiron.ru" `
+            -copyright   "Copyright (c) 2026 imiron.ru" `
+            -version     $version
+          if (-not (Test-Path "install-apache.exe")) {
+            Write-Error "Build failed — install-apache.exe not found."
+            exit 1
+          }
+          Write-Host "Built install-apache.exe ($version, $date)"
+
+      # ── 5. Upload artifact ─────────────────────────────────────────────────
+      - name: Upload artifact
+        if: steps.changed.outputs.changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-${{ github.run_id }}-${{ github.run_number }}
+          path: install-apache.exe
+          retention-days: 30
+
+      # ── 6. Create / update nightly pre-release ────────────────────────────
+      - name: Publish nightly release
+        if: steps.changed.outputs.changed == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          name: "Nightly build"
+          body: |
+            Automated nightly build from `main`.
+
+            **Commit:** ${{ github.sha }}
+            **Date:** ${{ github.run_id }}
+
+            > This is a pre-release. For stable versions see the [Releases](../../releases) page.
+          prerelease: true
+          files: install-apache.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── 7. Skip notice ────────────────────────────────────────────────────
+      - name: No changes — skipping build
+        if: steps.changed.outputs.changed != 'true'
+        run: echo "No changes in src/ since last run. Build skipped."

@@ -9,10 +9,8 @@ echo  ==========================================
 echo.
 
 set "SCRIPT_DIR=%~dp0"
-set "SRC_RU=%SCRIPT_DIR%src\install-apache-ru.ps1"
-set "SRC_EN=%SCRIPT_DIR%src\install-apache-en.ps1"
-set "OUT_RU=%SCRIPT_DIR%install-apache-ru.exe"
-set "OUT_EN=%SCRIPT_DIR%install-apache-en.exe"
+set "SRC=%SCRIPT_DIR%src\install-apache.ps1"
+set "OUT=%SCRIPT_DIR%install-apache.exe"
 
 :: Check PowerShell
 where powershell > nul 2>&1
@@ -36,25 +34,16 @@ if %errorLevel% neq 0 (
     echo  [+] ps2exe installed.
 )
 
-echo  [>] Building RU version...
+echo  [>] Building install-apache.exe ...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-    "Import-Module ps2exe; Invoke-ps2exe '%SRC_RU%' '%OUT_RU%' -requireAdmin -noConsole:$false -title 'Apache Installer' -description 'Apache HTTP Server Installer for Windows' -company 'imiron.ru' -copyright 'Copyright (c) 2026 imiron.ru' -version '1.0.0'"
+    "Import-Module ps2exe; Invoke-ps2exe '%SRC%' '%OUT%' -requireAdmin -noConsole:$false -title 'Apache Installer' -description 'Apache HTTP Server Installer for Windows (en/ru)' -company 'imiron.ru' -copyright 'Copyright (c) 2026 imiron.ru' -version '2.0.0'"
 
-if exist "%OUT_RU%" (
-    echo  [+] Built: %OUT_RU%
+if exist "%OUT%" (
+    echo  [+] Built: %OUT%
 ) else (
-    echo  [!] Build failed for RU version.
-)
-
-echo.
-echo  [>] Building EN version...
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-    "Import-Module ps2exe; Invoke-ps2exe '%SRC_EN%' '%OUT_EN%' -requireAdmin -noConsole:$false -title 'Apache Installer' -description 'Apache HTTP Server Installer for Windows' -company 'imiron.ru' -copyright 'Copyright (c) 2026 imiron.ru' -version '1.0.0'"
-
-if exist "%OUT_EN%" (
-    echo  [+] Built: %OUT_EN%
-) else (
-    echo  [!] Build failed for EN version.
+    echo  [!] Build failed.
+    pause
+    exit /b 1
 )
 
 echo.

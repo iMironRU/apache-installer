@@ -1,7 +1,8 @@
 # Apache HTTP Server Installer for Windows
 
 > Automated installer for Apache HTTP Server 2.4 on Windows.  
-> Supports multiple instances, backups, firewall management and ps2exe compilation.
+> Supports multiple instances, backups, firewall management and ps2exe compilation.  
+> **Single multilingual script** — language auto-detected from system locale (en / ru).
 
 **Copyright (c) 2026 [imiron.ru](https://imiron.ru)**  
 Licensed under the [Apache License 2.0](LICENSE)
@@ -28,7 +29,7 @@ Licensed under the [Apache License 2.0](LICENSE)
 - ✅ Windows Firewall rule management (no Security Alert popup)
 - ✅ Full operation logging with timestamps
 - ✅ Compatible with [ps2exe](https://github.com/MScholtes/PS2EXE) — compile to standalone `.exe`
-- ✅ Two languages: English (`-en`) and Russian (`-ru`)
+- ✅ **Single script** with auto-detected language (en / ru), override via `-Lang en|ru`
 
 ### Requirements
 
@@ -41,24 +42,24 @@ Licensed under the [Apache License 2.0](LICENSE)
 
 ### Quick Start
 
-**Option A — Run PowerShell script directly:**
+**Option A — Run compiled exe (recommended):**
 ```
-install-en.bat
-```
-
-**Option B — Run compiled exe (if available):**
-```
-install-apache-en.exe
+install-apache.exe
 ```
 
-**Option C — PowerShell directly:**
+**Option B — PowerShell directly:**
 ```powershell
-powershell -ExecutionPolicy Bypass -File src\install-apache-en.ps1
+powershell -ExecutionPolicy Bypass -File src\install-apache.ps1
+```
+
+**Option C — Force language:**
+```powershell
+powershell -ExecutionPolicy Bypass -File src\install-apache.ps1 -Lang ru
 ```
 
 ### Build EXE
 
-Run `build-exe.bat` — it will install ps2exe if needed and compile both language versions:
+Run `build-exe.bat` — it will install ps2exe if needed and compile the script:
 ```
 build-exe.bat
 ```
@@ -67,22 +68,31 @@ Or manually:
 ```powershell
 Install-Module -Name ps2exe -Scope CurrentUser -Force
 Import-Module ps2exe
-Invoke-ps2exe .\src\install-apache-en.ps1 .\install-apache-en.exe -requireAdmin -noConsole:$false
+Invoke-ps2exe .\src\install-apache.ps1 .\install-apache.exe -requireAdmin -noConsole:$false
 ```
+
+> Nightly builds are produced automatically via GitHub Actions (`.github/workflows/nightly-build.yml`)  
+> and published as release artifacts when the repository changes.
 
 ### Repository Structure
 
 ```
 apache-installer/
 ├── src/
-│   ├── install-apache-en.ps1   # English version
-│   └── install-apache-ru.ps1   # Russian version
-├── screenshots/                 # Demo screenshots
-├── install-en.bat               # Launch English version
-├── install-ru.bat               # Launch Russian version
-├── build-exe.bat                # Compile to exe via ps2exe
+│   └── install-apache.ps1       # Multilingual installer (en + ru)
+├── archive/                     # Legacy separate-language versions
+│   ├── install-apache-en.ps1
+│   ├── install-apache-ru.ps1
+│   ├── install-en.bat
+│   └── install-ru.bat
+├── .github/
+│   └── workflows/
+│       └── nightly-build.yml    # Nightly EXE build via ps2exe
+├── screenshots/                  # Demo screenshots
+├── build-exe.bat                 # Compile to exe via ps2exe
 ├── README.md
-├── LICENSE                      # Apache License 2.0
+├── CLAUDE.md                     # Project guide for AI assistants
+├── LICENSE                       # Apache License 2.0
 ├── CHANGELOG.md
 └── CONTRIBUTING.md
 ```
@@ -130,7 +140,7 @@ https://github.com/imiron-ru/apache-installer
 - ✅ Управление правилами брандмауэра Windows (без всплывающего окна)
 - ✅ Полное логирование всех операций с временными метками
 - ✅ Совместим с [ps2exe](https://github.com/MScholtes/PS2EXE) — компиляция в `.exe`
-- ✅ Два языка: английский (`-en`) и русский (`-ru`)
+- ✅ **Единый скрипт** с автоопределением языка (en / ru), ручная установка через `-Lang en|ru`
 
 ### Требования
 
@@ -143,24 +153,24 @@ https://github.com/imiron-ru/apache-installer
 
 ### Быстрый старт
 
-**Вариант A — запуск через bat:**
+**Вариант A — запуск скомпилированного exe (рекомендуется):**
 ```
-install-ru.bat
-```
-
-**Вариант B — запущенный exe (если скомпилирован):**
-```
-install-apache-ru.exe
+install-apache.exe
 ```
 
-**Вариант C — PowerShell напрямую:**
+**Вариант B — PowerShell напрямую:**
 ```powershell
-powershell -ExecutionPolicy Bypass -File src\install-apache-ru.ps1
+powershell -ExecutionPolicy Bypass -File src\install-apache.ps1
+```
+
+**Вариант C — принудительный выбор языка:**
+```powershell
+powershell -ExecutionPolicy Bypass -File src\install-apache.ps1 -Lang ru
 ```
 
 ### Сборка EXE
 
-Запустите `build-exe.bat` — он установит ps2exe если нужно и скомпилирует обе языковые версии:
+Запустите `build-exe.bat` — он установит ps2exe если нужно и скомпилирует скрипт:
 ```
 build-exe.bat
 ```
@@ -169,22 +179,31 @@ build-exe.bat
 ```powershell
 Install-Module -Name ps2exe -Scope CurrentUser -Force
 Import-Module ps2exe
-Invoke-ps2exe .\src\install-apache-ru.ps1 .\install-apache-ru.exe -requireAdmin -noConsole:$false
+Invoke-ps2exe .\src\install-apache.ps1 .\install-apache.exe -requireAdmin -noConsole:$false
 ```
+
+> Ночные сборки производятся автоматически через GitHub Actions (`.github/workflows/nightly-build.yml`)  
+> и публикуются как артефакты релиза при изменениях в репозитории.
 
 ### Структура репозитория
 
 ```
 apache-installer/
 ├── src/
-│   ├── install-apache-en.ps1   # Английская версия
-│   └── install-apache-ru.ps1   # Русская версия
-├── screenshots/                 # Скриншоты
-├── install-en.bat               # Запуск английской версии
-├── install-ru.bat               # Запуск русской версии
-├── build-exe.bat                # Компиляция в exe через ps2exe
+│   └── install-apache.ps1       # Многоязычный установщик (en + ru)
+├── archive/                     # Устаревшие раздельные версии
+│   ├── install-apache-en.ps1
+│   ├── install-apache-ru.ps1
+│   ├── install-en.bat
+│   └── install-ru.bat
+├── .github/
+│   └── workflows/
+│       └── nightly-build.yml    # Ночная сборка EXE через ps2exe
+├── screenshots/                  # Скриншоты
+├── build-exe.bat                 # Компиляция в exe через ps2exe
 ├── README.md
-├── LICENSE                      # Apache License 2.0
+├── CLAUDE.md                     # Руководство по проекту для ИИ-ассистентов
+├── LICENSE                       # Apache License 2.0
 ├── CHANGELOG.md
 └── CONTRIBUTING.md
 ```
