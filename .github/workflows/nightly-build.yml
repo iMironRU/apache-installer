@@ -22,6 +22,9 @@ jobs:
     name: Build install-apache.exe
     runs-on: windows-latest
 
+    permissions:
+      contents: write   # required to create/update GitHub releases and tags
+
     steps:
       # ── 1. Checkout ──────────────────────────────────────────────────────────
       - name: Checkout repository
@@ -101,7 +104,7 @@ jobs:
             Automated nightly build from `main`.
 
             **Commit:** ${{ github.sha }}
-            **Date:** ${{ github.run_id }}
+            **Date:** ${{ github.run_started_at }}
 
             > This is a pre-release. For stable versions see the [Releases](../../releases) page.
           prerelease: true
