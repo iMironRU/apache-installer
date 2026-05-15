@@ -318,10 +318,6 @@ $Strings = @{
         ChBitsExtractingNew   = 'Deploying new binaries...'
         ChBitsChanged         = 'Apache bitness changed: {0}-bit -> {1}-bit'
         ChBitsRecheckVC       = 'VC++ Redistributable check for new bitness...'
-        # Verification
-        VerGet                = 'GET {0} ...'
-        VerOk                 = 'Server responded HTTP 200 - works!'
-        VerWrongResponse      = 'Response: {0}. Check: {1}'
         OpeningBrowser        = 'Opening {0} in browser...'
         # Cleanup
         CleanupAfterError     = 'Cleaning up after error...'
@@ -618,10 +614,6 @@ $Strings = @{
         ChBitsExtractingNew   = 'Развёртывание новых бинарных файлов...'
         ChBitsChanged         = 'Разрядность Apache изменена: {0}-разрядная -> {1}-разрядная'
         ChBitsRecheckVC       = 'Проверка VC++ Redistributable для новой разрядности...'
-        # Verification
-        VerGet                = 'GET {0} ...'
-        VerOk                 = 'Сервер ответил HTTP 200 - работает!'
-        VerWrongResponse      = 'Ответ: {0}. Проверьте: {1}'
         OpeningBrowser        = 'Открытие {0} в браузере...'
         # Cleanup
         CleanupAfterError     = 'Очистка после ошибки...'
